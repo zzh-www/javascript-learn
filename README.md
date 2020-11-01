@@ -1717,3 +1717,276 @@ console.log(JSON.stringify(obj)); // {name: '小明同学', age: 14}
 
 
 ### 面向对象编程
+JavaScriptJavaScript不区分类和实例的概念，而是通过原型（prototype）来实现面向对象编程。
+意思就是只有实例，并且通过一种实例创建另一种实例。
+
+原型是指当我们想要创建xiaoming这个具体的学生时，我们并没有一个Student类型可用。那怎么办？恰好有这么一个现成的对象：
+```JS
+var robot = {
+    name: 'Robot',
+    height: 1.6,
+    run: function () {
+        console.log(this.name + ' is running...');
+    }
+};
+// 我们看这个robot对象有名字，有身高，还会跑，有点像小明，干脆就根据它来“创建”小明得了！
+
+// 于是我们把它改名为Student，然后创建出xiaoming：
+
+var Student = {
+    name: 'Robot',
+    height: 1.2,
+    run: function () {
+        console.log(this.name + ' is running...');
+    }
+};
+
+var xiaoming = {
+    name: '小明'
+};
+
+// xiaoming.__proto__ = Student;
+// 注意最后一行代码把xiaoming的原型指向了对象Student，看上去xiaoming仿佛是从Student继承下来的：
+
+xiaoming.name; // '小明'
+xiaoming.run(); // 小明 is running...
+// xiaoming有自己的name属性，但并没有定义run()方法。不过，由于小明是从Student继承而来，只要Student有run()方法，xiaoming也可以调用
+
+// 如果你把xiaoming的原型指向其他对象：
+
+var Bird = {
+    fly: function () {
+        console.log(this.name + ' is flying...');
+    }
+};
+
+xiaoming.__proto__ = Bird;
+// 现在xiaoming已经无法run()了，他已经变成了一只鸟：
+
+xiaoming.fly(); // 小明 is flying...
+// 在JavaScrip代码运行时期，你可以把xiaoming从Student变成Bird，或者变成任何对象。
+
+
+// 请注意，上述代码仅用于演示目的。在编写JavaScript代码时，不要直接用obj.__proto__去改变一个对象的原型，并且，低版本的IE也无法使用__proto__。
+
+
+
+// 正确创建  
+
+
+
+// 方法一
+// Object.create()方法可以传入一个原型对象，并创建一个基于该原型的新对象，
+// 但是新对象什么属性都没有，因此，我们可以编写一个函数来创建xiaoming：
+
+// 原型对象:
+var Student = {
+    name: 'Robot',
+    height: 1.2,
+    run: function () {
+        console.log(this.name + ' is running...');
+    }
+};
+
+function createStudent(name) {
+    // 基于Student原型创建一个新对象:
+    var s = Object.create(Student);
+    // 初始化新对象:
+    s.name = name;
+    return s;
+}
+
+var xiaoming = createStudent('小明');
+xiaoming.run(); // 小明 is running...
+xiaoming.__proto__ === Student; // true
+
+
+//JavaScript对每个创建的对象都会设置一个原型，指向它的原型对象。
+
+// 其原型链是：
+
+// arr ----> Array.prototype ----> Object.prototype ----> null
+
+// 很容易想到，如果原型链很长，那么访问一个对象的属性就会因为花更多的时间查找而变得更慢，因此要注意不要把原型链搞得太长。
+
+
+
+//方法二
+
+// 除了直接用{ ... }创建一个对象外，JavaScript还可以用一种构造函数的方法来创建对象。它的用法是，先定义一个构造函数：
+
+function Student(name) {
+    this.name = name;
+    this.hello = function () {
+        alert('Hello, ' + this.name + '!');
+    }
+}
+
+// 这确实是一个普通函数，但是在JavaScript中，可以用关键字new来调用这个函数，并返回一个对象：
+
+var xiaoming = new Student('小明');
+xiaoming.name; // '小明'
+xiaoming.hello(); // Hello, 小明!
+
+// 注意，如果不写new，这就是一个普通函数，它返回undefined。
+// 但是，如果写了new，它就变成了一个构造函数，它绑定的this指向新创建的对象，并默认返回this，也就是说，不需要在最后写return this;
+
+// 新创建的xiaoming的原型链是：
+
+// xiaoming ----> Student.prototype ----> Object.prototype ----> null
+
+
+
+// 也就是说，xiaoming的原型指向函数Student的原型。如果你又创建了xiaohong、xiaojun，那么这些对象的原型与xiaoming是一样的：
+
+// xiaoming ↘
+// xiaohong -→ Student.prototype ----> Object.prototype ----> null
+// xiaojun  ↗
+
+
+
+
+// 用new Student()创建的对象还从原型上获得了一个constructor属性，它指向函数Student本身：
+
+xiaoming.constructor === Student.prototype.constructor; // true
+Student.prototype.constructor === Student; // true
+
+Object.getPrototypeOf(xiaoming) === Student.prototype; // true
+
+xiaoming instanceof Student; // true
+
+// 要让创建的对象共享一个hello函数，根据对象的属性查找原则，我们只要把hello函数移动到xiaoming、xiaohong这些对象共同的原型上就可以了，也就是Student.prototype
+function Student(name) {
+    this.name = name;
+}
+
+Student.prototype.hello = function () {
+    alert('Hello, ' + this.name + '!');
+};
+
+```
+
+
+
+我们还可以编写一个createStudent()函数，在内部封装所有的new操作。一个常用的编程模式像这样：
+```JS
+function Student(props) {
+    this.name = props.name || '匿名'; // 默认值为'匿名'
+    this.grade = props.grade || 1; // 默认值为1
+}
+
+Student.prototype.hello = function () {
+    alert('Hello, ' + this.name + '!');
+};
+
+function createStudent(props) {
+    return new Student(props || {})
+}
+// 这个createStudent()函数有几个巨大的优点：一是不需要new来调用，二是参数非常灵活，可以不传，也可以这么传：
+
+var xiaoming = createStudent({
+    name: '小明'
+});
+
+xiaoming.grade; // 1
+```
+如果创建的对象有很多属性，我们只需要传递需要的某些属性，剩下的属性可以用默认值。由于参数是一个Object，我们无需记忆参数的顺序。如果恰好从JSON拿到了一个对象，就可以直接创建出xiaoming。
+
+
+
+### 继承实现
+怎么生孩子？？？？  
+
+
+现在，我们要基于Student扩展出PrimaryStudent  
+单纯调用Student的构造函数并不能实现继承，因为理论上两者是兄弟，这只是克隆，克隆后的继承关系是一样的  new PrimaryStudent() ----> PrimaryStudent.prototype ----> Object.prototype ----> null 所以两者不是父子关系而是兄弟   
+要将关系链改成 new PrimaryStudent() ----> PrimaryStudent.prototype ----> Student.prototype ----> Object.prototype ----> null 才会差了一个辈分
+我们必须借助一个中间对象来实现正确的原型链，这个中间对象的原型要指向Student.prototype。为了实现这一点，参考道爷（就是发明JSON的那个道格拉斯）的代码，中间对象可以用一个空函数F来实现：
+```JS
+// PrimaryStudent构造函数:
+function PrimaryStudent(props) {
+    Student.call(this, props);
+    this.grade = props.grade || 1;
+}
+
+// 空函数F:
+function F() {
+}
+
+// 把F的原型指向Student.prototype:
+F.prototype = Student.prototype;
+
+// 把PrimaryStudent的原型指向一个新的F对象，F对象的原型正好指向Student.prototype:
+PrimaryStudent.prototype = new F();
+
+// 把PrimaryStudent原型的构造函数修复为PrimaryStudent:
+PrimaryStudent.prototype.constructor = PrimaryStudent;
+
+// 继续在PrimaryStudent原型（就是new F()对象）上定义方法：
+PrimaryStudent.prototype.getGrade = function () {
+    return this.grade;
+};
+
+// 创建xiaoming:
+var xiaoming = new PrimaryStudent({
+    name: '小明',
+    grade: 2
+});
+xiaoming.name; // '小明'
+xiaoming.grade; // 2
+
+// 验证原型:
+xiaoming.__proto__ === PrimaryStudent.prototype; // true
+xiaoming.__proto__.__proto__ === Student.prototype; // true
+
+// 验证继承关系:
+xiaoming instanceof PrimaryStudent; // true
+xiaoming instanceof Student; // true
+```
+JavaScript的原型继承实现方式就是：
+
+定义新的构造函数，并在内部用call()调用希望“继承”的构造函数，并绑定this；
+
+借助中间函数F实现原型链继承，最好通过封装的inherits函数完成；
+
+继续在新的构造函数的原型上定义新方法。
+
+
+
+## class
+新的class关键字来编写Student，可以这样写：
+```JS
+class Student {
+    constructor(name) {
+        this.name = name;
+    }
+
+    hello() {
+        alert('Hello, ' + this.name + '!');
+    }
+}
+
+// 比较一下就可以发现，class的定义包含了构造函数constructor和定义在原型对象上的函数hello()（注意没有function关键字），这样就避免了Student.prototype.hello = function () {...}这样分散的代码。
+
+// 最后，创建一个Student对象代码和前面章节完全一样：
+
+var xiaoming = new Student('小明');
+xiaoming.hello();
+```
+
+
+#### Class继承
+
+用class定义对象的另一个巨大的好处是继承更方便了。想一想我们从Student派生一个PrimaryStudent需要编写的代码量。现在，原型继承的中间对象，原型对象的构造函数等等都不需要考虑了，直接通过extends来实现：
+```JS
+class PrimaryStudent extends Student {
+    constructor(name, grade) {
+        super(name); // 记得用super调用父类的构造方法!
+        this.grade = grade;
+    }
+
+    myGrade() {
+        alert('I am at grade ' + this.grade);
+    }
+}
+```
